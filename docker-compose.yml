@@ -1,0 +1,34 @@
+# Orion: app Next + Postgres. Pensado para Dokploy (Compose): asignale un dominio al servicio
+# `app` en el puerto 3000. Las notificaciones push necesitan HTTPS, que Dokploy pone con el dominio.
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://orion:${POSTGRES_PASSWORD:-orion}@db:5432/orion
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_EMAIL: ${VAPID_EMAIL:-orion@example.com}
+    expose:
+      - "3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: orion
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-orion}
+      POSTGRES_DB: orion
+    volumes:
+      - orion-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orion -d orion"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  orion-db:
