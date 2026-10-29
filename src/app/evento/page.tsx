@@ -10,6 +10,7 @@ import { type AstroEvent, type Timeline, timeline } from '@/lib/astro/events';
 import { describeLeads, isFollowed, notifiable } from '@/lib/alerts';
 import { useEvent } from '@/lib/hooks';
 import { enablePush } from '@/lib/push-client';
+import { goBack, haptic } from '@/lib/platform';
 import { setSettings, useHydrated, useSettings } from '@/lib/store';
 
 export default function Page() {
@@ -31,13 +32,13 @@ function Evento() {
   if (!s.location) return <Empty text="Elegí tu ubicación para ver este evento." />;
   if (ev === undefined) return <Empty text="Calculando…" />;
   if (!ev) return <Empty text="No encontramos este evento. Puede que ya haya pasado." />;
-  return <Detail ev={ev} onBack={() => (window.history.length > 1 ? router.back() : router.push('/'))} />;
+  return <Detail ev={ev} onBack={() => goBack(router)} />;
 }
 
 function Empty({ text }: { text: string }) {
   return (
     <div className="page">
-      <Link className="icon-btn" href="/" aria-label="Volver"><IconBack /></Link>
+      <Link className="icon-btn" href="/" transitionTypes={['nav-back']} aria-label="Volver"><IconBack /></Link>
       <p className="muted">{text}</p>
     </div>
   );
@@ -169,6 +170,7 @@ function Detail({ ev, onBack }: { ev: AstroEvent; onBack: () => void }) {
 
   async function toggle() {
     setMsg(null);
+    haptic();
     if (!s.push.endpoint) {
       setBusy(true);
       const r = await enablePush();
@@ -196,7 +198,8 @@ function Detail({ ev, onBack }: { ev: AstroEvent; onBack: () => void }) {
 
   return (
     <div className="col">
-      <section style={{ position: 'relative', height: 300, overflow: 'hidden', background: 'var(--hero)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '16px 20px 20px' }}>
+      {/* El alto suma el área segura: en iPhone la isla queda sobre el cielo, no sobre los botones. */}
+      <section className="ev-hero">
         <Hero ev={ev} south={isSouth(loc)} />
         <div className="row" style={{ position: 'relative', justifyContent: 'space-between' }}>
           <button type="button" className="icon-btn glass" aria-label="Volver" onClick={onBack}><IconBack /></button>
@@ -209,7 +212,7 @@ function Detail({ ev, onBack }: { ev: AstroEvent; onBack: () => void }) {
         </div>
       </section>
 
-      <div className="page">
+      <div className="page stagger">
         <div className="grid-3">
           {ev.facts.map((f) => <Stat key={f.label} solid label={f.label} value={f.value} sub={f.sub} />)}
         </div>
@@ -222,15 +225,15 @@ function Detail({ ev, onBack }: { ev: AstroEvent; onBack: () => void }) {
 
         <div className={canNotify ? 'grid-2' : 'col'} style={{ gap: 10 }}>
           {canNotify && (
-            <button type="button" className={`btn ${on ? 'btn-on' : 'btn-ghost'}`} aria-pressed={on} onClick={toggle} disabled={busy}>
+            <button type="button" className={`btn ${on ? 'btn-on rang' : 'btn-ghost'}`} aria-pressed={on} onClick={toggle} disabled={busy}>
               <IconBell size={18} />
               {busy ? 'Activando…' : on ? 'Avisos activos' : 'Avisarme'}
             </button>
           )}
-          <Link className="btn btn-gold" href={`/viajes?evento=${ev.id}`}>Planificar viaje</Link>
+          <Link className="btn btn-gold" href={`/viajes?evento=${ev.id}`} transitionTypes={['nav-forward']}>Planificar viaje</Link>
         </div>
-        {on && <p className="ok-text">{anyLead ? describeLeads(ev, s.leads, now) : 'Elegí en Alertas con cuánta anticipación querés el aviso.'}</p>}
-        {msg && <p className={msg.ok ? 'ok-text' : 'err-text'} role="status">{msg.text}</p>}
+        {on && <p className="ok-text fade-in">{anyLead ? describeLeads(ev, s.leads, now) : 'Elegí en Alertas con cuánta anticipación querés el aviso.'}</p>}
+        {msg && <p className={`${msg.ok ? 'ok-text' : 'err-text'} fade-in`} role="status">{msg.text}</p>}
       </div>
     </div>
   );

@@ -107,7 +107,7 @@ export default function Bienvenida() {
           style={{ animationDelay: '.45s', marginTop: 4, minHeight: 54, fontSize: 16 }}
           onClick={() => {
             setSettings({ onboarded: true });
-            router.replace('/');
+            router.replace('/', { transitionTypes: ['nav-forward'] });
           }}
         >
           Empezar a mirar el cielo

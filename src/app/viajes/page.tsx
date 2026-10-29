@@ -13,6 +13,7 @@ import { cityLoc } from '@/lib/geo';
 import { useClouds, useEvents, useOnline } from '@/lib/hooks';
 import { CHECKLIST, type Trip } from '@/lib/prefs';
 import { enablePush } from '@/lib/push-client';
+import { goBack, haptic } from '@/lib/platform';
 import { setSettings, useHydrated, useSettings } from '@/lib/store';
 import { cloudLabel, cloudsBetween } from '@/lib/weather';
 
@@ -143,7 +144,7 @@ function Planner({ ev, home, options }: { ev: AstroEvent; home: Loc; options: As
   return (
     <div className="page" style={{ gap: 18 }}>
       <header className="row">
-        <button type="button" className="icon-btn" aria-label="Volver" onClick={() => (window.history.length > 1 ? router.back() : router.push('/'))}><IconBack /></button>
+        <button type="button" className="icon-btn" aria-label="Volver" onClick={() => goBack(router)}><IconBack /></button>
         <h1 className="display" style={{ fontSize: 22, fontWeight: 700 }}>Planificar viaje</h1>
       </header>
 
@@ -152,7 +153,7 @@ function Planner({ ev, home, options }: { ev: AstroEvent; home: Loc; options: As
           <span className="m">{ev.dayLabel.month}</span>
           <span className="d">{ev.dayLabel.day}</span>
         </div>
-        <Link href={`/evento?id=${ev.id}`} className="col" style={{ flex: 1, gap: 3, color: 'var(--ink)', textDecoration: 'none', minWidth: 0 }}>
+        <Link href={`/evento?id=${ev.id}`} transitionTypes={['nav-forward']} className="col" style={{ flex: 1, gap: 3, color: 'var(--ink)', textDecoration: 'none', minWidth: 0 }}>
           <span style={{ fontSize: 16, fontWeight: 600 }}>{ev.title}</span>
           <span className="small muted">{nightLabel} · {level.label.toLowerCase()}</span>
         </Link>
@@ -216,7 +217,7 @@ function Planner({ ev, home, options }: { ev: AstroEvent; home: Loc; options: As
           <span className="small muted">{done} de {CHECKLIST.length}</span>
         </div>
         {CHECKLIST.map((label, i) => (
-          <button key={label} type="button" className="check" aria-pressed={!!items[i]} onClick={() => setItems((cur) => ({ ...cur, [i]: !cur[i] }))}>
+          <button key={label} type="button" className="check" aria-pressed={!!items[i]} onClick={() => { haptic(); setItems((cur) => ({ ...cur, [i]: !cur[i] })); }}>
             <span className="box">{items[i] && <IconCheck size={14} style={{ color: 'var(--on-gold)' }} />}</span>
             {label}
           </button>
@@ -226,13 +227,13 @@ function Planner({ ev, home, options }: { ev: AstroEvent; home: Loc; options: As
       <button type="button" className="btn shine" style={{ minHeight: 54, color: 'var(--on-gold)', border: 0, opacity: 1 }} onClick={save} disabled={!dirty}>
         {!dirty ? 'Guardado · disponible sin conexión' : saved ? 'Guardar cambios' : 'Guardar viaje y avisarme'}
       </button>
-      {note && <p className="err-text" role="status">{note}</p>}
+      {note && <p className="err-text fade-in" role="status">{note}</p>}
 
       {s.trips.length > 0 && (
         <section className="col" style={{ gap: 8 }}>
           <h2 className="h3">Tus viajes</h2>
           {s.trips.map((t) => (
-            <div key={t.id} className="row" style={{ background: 'var(--surface)', borderRadius: 16, padding: '10px 8px 10px 16px' }}>
+            <div key={t.id} className="row rise" style={{ background: 'var(--surface)', borderRadius: 16, padding: '10px 8px 10px 16px' }}>
               <Link href={`/viajes?evento=${t.eventId}`} className="col" style={{ flex: 1, gap: 2, color: 'var(--ink)', textDecoration: 'none' }} aria-current={t.eventId === ev.id ? 'true' : undefined}>
                 <span style={{ fontSize: 14, fontWeight: 600 }}>{t.eventTitle}</span>
                 <span className="small muted">{t.dest?.name ?? 'Desde casa'} · sale {departLabel(t.depart)}</span>

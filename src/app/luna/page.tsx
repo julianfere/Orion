@@ -1,13 +1,15 @@
 'use client';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { ViewTransition, useMemo, useState } from 'react';
 import { MoonGlyph } from '@/components/art';
 import { IconBell, IconRise, IconSet } from '@/components/icons';
+import { SkeletonCards } from '@/components/ui';
 import { type Loc, DAY, decimal, hhmm, isSouth, monShort, parts, shortDate, wdShort } from '@/lib/astro/core';
 import { moonDay, nextQuarters } from '@/lib/astro/events';
 import { isFollowed } from '@/lib/alerts';
 import { useEvents } from '@/lib/hooks';
 import { enablePush } from '@/lib/push-client';
+import { haptic } from '@/lib/platform';
 import { setSettings, useHydrated, useSettings } from '@/lib/store';
 
 export default function Luna() {
@@ -29,6 +31,7 @@ function LunaView({ loc }: { loc: Loc }) {
   const s = useSettings();
   const south = isSouth(loc);
   const [day, setDay] = useState(0);
+  const [picked, setPicked] = useState(false); // la animación de fase solo al elegir un día
   const [err, setErr] = useState('');
   const now = useMemo(() => new Date(), []);
   const days = useMemo(() => Array.from({ length: 8 }, (_, i) => moonDay(loc, new Date(now.getTime() + i * DAY))), [loc, now]);
@@ -65,9 +68,11 @@ function LunaView({ loc }: { loc: Loc }) {
       <section style={{ position: 'relative', overflow: 'hidden', borderRadius: 24, background: 'var(--surface-2)', padding: '24px 20px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
         <div className="stars-bg" />
         <div className="float" style={{ position: 'relative' }}>
-          <MoonGlyph className="glow-moon" size={180} fraction={sel.fraction} waxing={sel.waxing} south={south} dark="#1E2540" craters label={`${sel.name}, ${sel.illum} por ciento iluminada`} />
+          <ViewTransition name="moon-hero" share="morph">
+            <MoonGlyph key={day} className={`glow-moon${picked ? ' phase-in' : ''}`} size={180} fraction={sel.fraction} waxing={sel.waxing} south={south} dark="#1E2540" craters label={`${sel.name}, ${sel.illum} por ciento iluminada`} />
+          </ViewTransition>
         </div>
-        <div className="col" style={{ position: 'relative', alignItems: 'center', gap: 2 }}>
+        <div key={day} className={`col${picked ? ' fade-in' : ''}`} style={{ position: 'relative', alignItems: 'center', gap: 2 }}>
           <span className="display" style={{ fontSize: 22, fontWeight: 600 }}>{sel.name}</span>
           <span className="muted" style={{ fontSize: 13 }}>{sel.wd} {sel.num} {monShort(sel.date)} · {sel.illum}% iluminada · {decimal(sel.ageDays)} días</span>
         </div>
@@ -96,7 +101,7 @@ function LunaView({ loc }: { loc: Loc }) {
               type="button"
               aria-pressed={on}
               aria-label={`${d.wd} ${d.num}, ${d.illum} por ciento`}
-              onClick={() => setDay(i)}
+              onClick={() => { haptic(); setPicked(true); setDay(i); }}
               style={{ flex: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 48, minHeight: 72, padding: '8px 4px', borderRadius: 14, cursor: 'pointer', font: '500 11px var(--body)', transition: 'all .2s', ...(on ? { background: 'var(--gold)', color: 'var(--on-gold)', border: '1px solid var(--gold)' } : { background: 'var(--surface)', color: 'var(--ink)', border: '1px solid rgba(255,255,255,0.06)' }) }}
             >
               <span>{d.wd}</span>
@@ -111,7 +116,7 @@ function LunaView({ loc }: { loc: Loc }) {
         <h2 className="display" style={{ fontSize: 18, fontWeight: 600 }}>Próximas fases</h2>
         <div className="grid-2">
           {phases.map((p) => (
-            <div key={p.at.toISOString()} className="row" style={{ background: 'var(--surface)', borderRadius: 14, padding: 12, gap: 10 }}>
+            <div key={p.at.toISOString()} className="row rise" style={{ background: 'var(--surface)', borderRadius: 14, padding: 12, gap: 10 }}>
               <MoonGlyph size={30} fraction={[0, 0.5, 1, 0.5][p.quarter]} waxing={p.quarter <= 1} south={south} />
               <div className="col" style={{ gap: 1 }}>
                 <span style={{ fontSize: 13, fontWeight: 600 }}>{p.name}</span>
@@ -124,17 +129,17 @@ function LunaView({ loc }: { loc: Loc }) {
 
       <section className="col" style={{ gap: 10 }}>
         <h2 className="display" style={{ fontSize: 18, fontWeight: 600 }}>Eventos lunares</h2>
-        {!events && <span className="small muted">Calculando…</span>}
+        {!events && <SkeletonCards count={2} label="Calculando…" />}
         {events && lunar.length === 0 && <span className="small muted">No hay encuentros de la Luna con planetas visibles en las próximas semanas.</span>}
         {lunar.map((e) => {
           const on = !!s.push.endpoint && isFollowed(e, s);
           return (
             <div key={e.id} className="row" style={{ background: 'var(--surface)', borderRadius: 16, padding: '12px 12px 12px 16px' }}>
-              <Link href={`/evento?id=${e.id}`} className="col" style={{ flex: 1, gap: 2, color: 'var(--ink)', textDecoration: 'none' }}>
+              <Link href={`/evento?id=${e.id}`} transitionTypes={['nav-forward']} className="col" style={{ flex: 1, gap: 2, color: 'var(--ink)', textDecoration: 'none' }}>
                 <span style={{ fontSize: 14, fontWeight: 600 }}>{e.title}</span>
                 <span className="small muted">{e.category === 'luna' ? e.detail : `${shortDate(new Date(e.at))} · ${e.detail}`}</span>
               </Link>
-              <button type="button" className="bell" aria-pressed={on} aria-label={`${on ? 'Desactivar aviso' : 'Avisarme'}: ${e.title}`} onClick={() => toggle(e.id, on)}>
+              <button type="button" className={`bell${on ? ' rang' : ''}`} aria-pressed={on} aria-label={`${on ? 'Desactivar aviso' : 'Avisarme'}: ${e.title}`} onClick={() => { haptic(); void toggle(e.id, on); }}>
                 <IconBell size={20} />
               </button>
             </div>

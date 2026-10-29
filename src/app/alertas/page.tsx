@@ -9,6 +9,7 @@ import { locateMe } from '@/lib/geo';
 import { useEvents } from '@/lib/hooks';
 import { CATS, LEADS } from '@/lib/prefs';
 import { disablePush, enablePush, pushSupport, testPush } from '@/lib/push-client';
+import { haptic } from '@/lib/platform';
 import { setSettings, useHydrated, useSettings } from '@/lib/store';
 
 export default function Alertas() {
@@ -65,7 +66,7 @@ export default function Alertas() {
     : 'Apagados: no vas a recibir avisos';
 
   return (
-    <div className="page">
+    <div className="page stagger">
       <h1 className="h1">Alertas</h1>
 
       <div className="drop row" style={{ borderRadius: 20, background: 'rgba(30,37,64,0.9)', border: '1px solid rgba(255,255,255,0.1)', padding: 14, alignItems: 'flex-start' }} aria-label="Vista previa de un aviso">
@@ -84,7 +85,7 @@ export default function Alertas() {
           <SwitchRow label="Avisos en este dispositivo" hint={busy ? 'Un momento…' : pushHint} on={pushOn} onToggle={togglePush} />
         </div>
         {pushOn && <button type="button" className="btn btn-ghost btn-sm" onClick={test} disabled={busy}>Mandarme un aviso de prueba</button>}
-        {msg && <span className={msg.ok ? 'ok-text' : 'err-text'} role="status">{msg.text}</span>}
+        {msg && <span className={`${msg.ok ? 'ok-text' : 'err-text'} fade-in`} role="status">{msg.text}</span>}
       </section>
 
       <section className="col" style={{ gap: 10 }}>
@@ -120,7 +121,7 @@ export default function Alertas() {
         <h2 className="h3">Anticipación</h2>
         <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
           {LEADS.map((l) => (
-            <button key={l.key} type="button" className="chip soft-on" style={{ minHeight: 40 }} aria-pressed={s.leads[l.key]} onClick={() => setSettings((cur) => ({ leads: { ...cur.leads, [l.key]: !cur.leads[l.key] } }))}>{l.label}</button>
+            <button key={l.key} type="button" className="chip soft-on" style={{ minHeight: 40 }} aria-pressed={s.leads[l.key]} onClick={() => { haptic(); setSettings((cur) => ({ leads: { ...cur.leads, [l.key]: !cur.leads[l.key] } })); }}>{l.label}</button>
           ))}
         </div>
       </section>

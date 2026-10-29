@@ -42,7 +42,10 @@ export function useEvents(loc: Loc | null): AstroEvent[] | null {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [k]);
-  return state && state.k === k ? state.evs : null;
+  // Si ya están en caché se devuelven en el mismo render: así la pantalla nueva aparece
+  // completa durante la transición, sin pasar por "Calculando…".
+  if (state && state.k === k) return state.evs;
+  return loc ? cache.get(k) ?? null : null;
 }
 
 export function useEvent(loc: Loc | null, id: string | null): AstroEvent | null | undefined {

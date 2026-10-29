@@ -1,14 +1,15 @@
 'use client';
 // Suscripción push del dispositivo, igual que en Cine: el navegador da una suscripción y el
 // servidor la guarda junto con la ubicación y las preferencias de Alertas.
+import { isStandalone, platform } from './platform';
 import { getSettings, prefsOf, setSettings } from './store';
 
 export type PushSupport = 'ok' | 'unsupported' | 'ios-browser' | 'denied';
 
 export function pushSupport(): PushSupport {
   if (typeof window === 'undefined') return 'unsupported';
-  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  const standalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
+  const ios = platform() === 'ios';
+  const standalone = isStandalone();
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
     // En iPhone el push solo existe con la app instalada en la pantalla de inicio.
     return ios && !standalone ? 'ios-browser' : 'unsupported';

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import { AppEffects } from '@/components/AppEffects';
 import { BottomNav } from '@/components/ui';
+import { PLATFORM_SCRIPT } from '@/lib/platform';
 import './globals.css';
 
 const display = Space_Grotesk({ subsets: ['latin'], weight: ['500', '600', '700'], variable: '--font-display' });
@@ -20,11 +21,16 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
+  // Android: el teclado achica la ventana en vez de tapar los campos.
+  interactiveWidget: 'resizes-content',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${display.variable} ${body.variable}`}>
+    <html lang="es" className={`${display.variable} ${body.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: PLATFORM_SCRIPT }} />
+      </head>
       <body>
         <div className="app">
           <main>{children}</main>

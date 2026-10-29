@@ -1,13 +1,14 @@
 'use client';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { ViewTransition, useMemo, useState } from 'react';
 import { GlowDef, MoonGlyph, OrionGlyph, Stars } from '@/components/art';
 import { IconCloudOk, IconEye, IconPin } from '@/components/icons';
 import { LocationSheet } from '@/components/LocationSheet';
-import { EventCard, Stat } from '@/components/ui';
+import { EventCard, SkeletonCards, Stat } from '@/components/ui';
 import { type Level, DAY, coords, isSouth, longDate, monthLong, parts } from '@/lib/astro/core';
 import { skyTonight } from '@/lib/astro/events';
 import { HORIZON_DAYS, useClouds, useEvents, useOnline } from '@/lib/hooks';
+import { haptic } from '@/lib/platform';
 import { setSettings, useHydrated, useSettings } from '@/lib/store';
 import { cloudLabel, cloudsBetween } from '@/lib/weather';
 
@@ -50,7 +51,7 @@ export default function Cielo() {
             className="icon-btn"
             aria-pressed={s.red}
             aria-label="Modo noche rojo"
-            onClick={() => setSettings({ red: !s.red })}
+            onClick={() => { haptic(); setSettings({ red: !s.red }); }}
             style={s.red ? { background: '#fff', color: 'var(--bg)' } : { color: 'var(--coral)', border: '1px solid rgba(255,255,255,0.12)' }}
           >
             <IconEye />
@@ -83,7 +84,9 @@ export default function Cielo() {
             </div>
             {sky && (
               <Link href="/luna" aria-label={`Ver Luna: ${sky.moon.name}, ${sky.moon.illum} por ciento`} style={{ display: 'block', flex: 'none' }}>
-                <MoonGlyph className="glow-gold" size={60} fraction={sky.moon.fraction} waxing={sky.moon.waxing} south={isSouth(loc)} dark="#1E2540" />
+                <ViewTransition name="moon-hero" share="morph">
+                  <MoonGlyph className="glow-gold" size={60} fraction={sky.moon.fraction} waxing={sky.moon.waxing} south={isSouth(loc)} dark="#1E2540" />
+                </ViewTransition>
               </Link>
             )}
           </div>
@@ -111,13 +114,14 @@ export default function Cielo() {
           </div>
           <div role="group" aria-label="Filtrar por instrumento" className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
             {FILTERS.map(([v, l]) => (
-              <button key={v} type="button" className="chip" aria-pressed={filter === v} onClick={() => { setFilter(v); setShown(PAGE); }}>{l}</button>
+              <button key={v} type="button" className="chip" aria-pressed={filter === v} onClick={() => { haptic(); setFilter(v); setShown(PAGE); }}>{l}</button>
             ))}
           </div>
-          <div className="col" style={{ gap: 10 }}>
-            {!events && <span className="small muted">Calculando el cielo…</span>}
-            {events && list.length === 0 && <span className="small muted">No hay eventos para este instrumento en los próximos meses.</span>}
-            {list.slice(0, shown).map((ev) => <EventCard key={ev.id} ev={ev} />)}
+          {/* key: al cambiar de filtro la lista vuelve a entrar escalonada */}
+          <div key={filter} className="col" style={{ gap: 10 }}>
+            {!events && <SkeletonCards label="Calculando el cielo…" />}
+            {events && list.length === 0 && <span className="small muted fade-in">No hay eventos para este instrumento en los próximos meses.</span>}
+            {list.slice(0, shown).map((ev, i) => <EventCard key={ev.id} ev={ev} index={i >= shown - PAGE ? i - (shown - PAGE) : 0} />)}
           </div>
           {list.length > shown && (
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShown((n) => n + PAGE)}>Ver más eventos ({list.length - shown})</button>
